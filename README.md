@@ -5,7 +5,7 @@
 **当前仓库提供两个版本供选择，请根据您的网络需求进行部署：**
 
 1. **[默认版本] Wireproxy 轻量版**：位于主目录。无需特权模式，CPU 和内存占用极低（几乎为0），连接极度稳定。**缺点是仅支持 IPv4 代理出口**。
-2. **[备选版本] 官方 warp-svc 完整版**：位于 `warp-svc/` 目录。使用官方守护进程，**支持完整的 6in4（即通过代理访问纯 IPv6 网站）**。缺点是需要特权模式（`privileged: true`），且守护进程会导致较高的 CPU 占用。
+2. **[备选版本] 官方 warp-svc 完整版**：位于 `warp-svc/` 目录。使用官方守护进程，**支持完整的 6in4（即通过代理访问纯 IPv6 网站）**。缺点是需要特权模式（`privileged: true`），且守护进程会导致较高的 CPU 占用。（会疯狂占用cpu不建议使用）
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
