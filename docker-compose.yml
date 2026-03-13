@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   warp-socks:
     build: .
@@ -7,7 +8,7 @@ services:
     ports:
       - "1080:1080"
     environment:
-      - RESTART_INTERVAL=3600 # 每小时换一次 IP
+      - RESTART_INTERVAL=3600  # 换IP间隔(秒)
     sysctls:
       - net.ipv6.conf.all.disable_ipv6=0
       - net.ipv6.conf.all.forwarding=1
