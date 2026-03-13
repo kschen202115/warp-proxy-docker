@@ -8,6 +8,7 @@ do
   echo "Rotating WARP IP..."
   pkill wireproxy
   
+  mkdir -p /etc/wireguard
   cd /etc/wireguard
   rm -f wgcf-account.toml wgcf-profile.conf wireproxy.conf
   wgcf register --accept-tos

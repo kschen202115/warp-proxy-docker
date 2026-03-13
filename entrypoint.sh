@@ -1,7 +1,10 @@
 #!/bin/bash
 
-# 初始化 WARP 账号并生成 WireGuard 配置文件
+# 确保目录存在
+mkdir -p /etc/wireguard
 cd /etc/wireguard
+
+# 初始化 WARP 账号并生成 WireGuard 配置文件
 if [ ! -f "wgcf-profile.conf" ]; then
     echo "Generating new WARP identity..."
     wgcf register --accept-tos
