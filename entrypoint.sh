@@ -6,24 +6,46 @@ mkdir -p /etc/warp-go
 cd /etc/warp-go
 
 if [ ! -f "warp.conf" ]; then
-    echo "[INFO] Generating new WARP identity with warp-go..."
-    warp-go --register --config=warp.conf
+    echo "[INFO] Generating new WARP identity..."
+    # 尝试用 warp-go 注册，如果失败，使用 fscarmen 的 API 代理
+    if ! warp-go --register --export-wireguard=warp.conf > /dev/null 2>&1; then
+        echo "[WARN] warp-go register failed, using API fallback..."
+        API_RESP=$(curl -s --retry 5 https://warp.cloudflare.nyc.mn/?run=register || true)
+        if echo "$API_RESP" | grep -q 'private_key'; then
+            DEV_ID=$(echo "$API_RESP" | jq -r '.id')
+            TOK=$(echo "$API_RESP" | jq -r '.token')
+            PRIV=$(echo "$API_RESP" | jq -r '.private_key')
+            cat > warp.conf << CONFE
+[Interface]
+PrivateKey = ${PRIV}
+Address = 172.16.0.2/32
+Address = 2606:4700:110:81c7:da82:f745:ceb3:6b64/128
+DNS = 1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001
+MTU = 1280
+[Peer]
+PublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=
+AllowedIPs = 0.0.0.0/0
+AllowedIPs = ::/0
+Endpoint = engage.cloudflareclient.com:2408
+CONFE
+        else
+            echo "[ERROR] API fallback also failed. Exiting."
+            exit 1
+        fi
+    fi
     
-    # 增加 Socks5 支持（通过 warp-go 内部特性，或者我们还是结合 wireproxy 提供 Socks5，
-    # 但根据要求，我们要用 warp-go 接管。需要注意 warp-go 1.0.8 并不直接暴露 Socks5 端口。
-    # 为了实现 Socks5，我们需要使用 warp-go 生成的 WireGuard 配置并用 wireproxy 启动。
-    # 这样既利用了 warp-go 的高性能自动换 IP 特性，又暴露了安全的 1080 代理。
-    # 等等，warp-go 实际上本身就是一个专门替换 wgcf 的配置生成器，同时也可以作为代理端（--proxy）！
-    # 查阅资料得知，warp-go --export-wireguard=warp.conf 后，可以直接搭配 wireproxy 使用。
-    # 这里我们用 warp-go 注册账号并导出配置，然后用 wireproxy 启动 1080 端口。
-    
-    # 转换为 wireproxy 格式
     echo "" >> warp.conf
     echo "[Socks5]" >> warp.conf
     echo "BindAddress = 0.0.0.0:1080" >> warp.conf
 fi
 
-echo "[INFO] Starting wireproxy with warp-go generated config..."
+if [ "${IPV6_PRIORITY}" = "true" ]; then
+    sed -i 's/DNS = .*/DNS = 2606:4700:4700::1111, 2606:4700:4700::1001, 1.1.1.1, 1.0.0.1/g' warp.conf
+else
+    sed -i 's/DNS = .*/DNS = 1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001/g' warp.conf
+fi
+
+echo "[INFO] Starting wireproxy with generated config..."
 wireproxy -c /etc/warp-go/warp.conf > /var/log/wireproxy.log 2>&1 &
 WP_PID=$!
 
