@@ -1,15 +1,11 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  warp-socks:
+  warp:
     build: .
-    container_name: warp-socks
-    privileged: true
+    container_name: warp-proxy
+    restart: always
     ports:
       - "1080:1080"
     environment:
-      - RESTART_INTERVAL=3600  # 换IP间隔(秒)
-    sysctls:
-      - net.ipv6.conf.all.disable_ipv6=0
-      - net.ipv6.conf.all.forwarding=1
-    restart: always
+      - ROTATE_INTERVAL=300
