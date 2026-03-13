@@ -7,39 +7,16 @@ while true
 do
   MATCH=false
   while [ "$MATCH" = false ]; do
-      echo "[INFO] Requesting new WARP identity..."
+      echo "[INFO] Requesting new WARP identity with wgcf..."
       pkill wireproxy
       sleep 3
       
       cd /etc/warp-go
-      rm -f warp.conf
+      rm -f warp.conf wgcf-account.toml
       
-      if ! warp-go --register --export-wireguard=warp.conf > /dev/null 2>&1; then
-          echo "[WARN] warp-go register failed, using API fallback..."
-          API_RESP=$(curl -s --retry 5 https://warp.cloudflare.nyc.mn/?run=register || true)
-          if echo "$API_RESP" | grep -q 'private_key'; then
-              DEV_ID=$(echo "$API_RESP" | jq -r '.id')
-              TOK=$(echo "$API_RESP" | jq -r '.token')
-              PRIV=$(echo "$API_RESP" | jq -r '.private_key')
-              cat > warp.conf << CONFE
-[Interface]
-PrivateKey = ${PRIV}
-Address = 172.16.0.2/32
-Address = 2606:4700:110:81c7:da82:f745:ceb3:6b64/128
-DNS = 1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001
-MTU = 1280
-[Peer]
-PublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=
-AllowedIPs = 0.0.0.0/0
-AllowedIPs = ::/0
-Endpoint = engage.cloudflareclient.com:2408
-CONFE
-          else
-              echo "[ERROR] API fallback also failed. Retrying in 5s..."
-              sleep 5
-              continue
-          fi
-      fi
+      wgcf register --accept-tos
+      wgcf generate
+      mv wgcf-profile.conf warp.conf
       
       echo "" >> warp.conf
       echo "[Socks5]" >> warp.conf
