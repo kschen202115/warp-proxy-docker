@@ -8,6 +8,7 @@ do
 
   echo "[INFO] Rotating WARP IP..."
   pkill wireproxy
+  sleep 3
   
   mkdir -p /etc/wireguard
   cd /etc/wireguard
