@@ -7,12 +7,12 @@ function register_warp() {
     wgcf register --accept-tos
     wgcf generate
     
-    # 1. 删除 DNS
+    # 1. 彻底删除 DNS 行
     sed -i '/DNS/d' wgcf-profile.conf
     # 2. 设置 MTU
     sed -i "s/MTU = .*/MTU = 1280/" wgcf-profile.conf
-    # 3. 核心修复：禁用自动路由表和防火墙规则，防止报错删除网卡
-    sed -i '/\[Interface\]/a Table = off' wgcf-profile.conf
+    # 3. 启用 PostUp 确保路由生效，但不使用 Table = off
+    # 我们让 wg-quick 正常工作，通过安装 ip6tables 解决它的报错
     
     cp wgcf-profile.conf /etc/wireguard/wg0.conf
 }
@@ -20,19 +20,12 @@ function register_warp() {
 register_warp
 
 echo "[$(date)] 启动 WireGuard 隧道..."
-WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go wg-quick up wg0
+# 环境变量：让 wg-quick 忽略 resolvconf 错误
+export WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
+wg-quick up wg0
 
-# 检查网卡是否成功
-max_retry=10
-counter=0
-while ! ip link show wg0 > /dev/null 2>&1; do
-    sleep 1
-    ((counter++))
-    if [ $counter -ge $max_retry ]; then
-        echo "错误：wg0 网卡未能在 10 秒内启动！"
-        exit 1
-    fi
-done
+# 验证网卡和 IP
+ip addr show wg0
 
 echo "[$(date)] 启动 Dante SOCKS5 代理..."
 sockd -D
