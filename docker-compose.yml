@@ -4,6 +4,11 @@ services:
   warp:
     build: .
     container_name: warp-proxy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
     restart: always
     ports:
       - "1080:1080"
