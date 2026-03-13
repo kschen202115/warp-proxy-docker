@@ -1,20 +1,26 @@
-FROM ubuntu:22.04
+FROM alpine:latest
 
-# 避免安装时的交互提示
-ENV DEBIAN_FRONTEND=noninteractive
+# 1. 安装基础工具 (增加 grep 以便解析版本)
+RUN apk add --no-cache \
+    wireguard-tools curl dante-server iproute2 ca-certificates bash grep
 
-# 安装必要的依赖、Cloudflare 官方源以及 socat（用于端口转发）
-RUN apt-get update && \
-    apt-get install -y curl gnupg lsb-release socat iproute2 iptables && \
-    curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/cloudflare-client.list && \
-    apt-get update && \
-    apt-get install -y cloudflare-warp && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# 2. 动态获取最新的 wgcf 并安装
+RUN WGCF_URL=$(curl -s https://api.github.com/repos/ViRb3/wgcf/releases/latest | grep "browser_download_url.*linux_amd64" | cut -d '"' -f 4) && \
+    echo "Downloading latest wgcf from: $WGCF_URL" && \
+    curl -L "$WGCF_URL" -o /usr/local/bin/wgcf && \
+    chmod +x /usr/local/bin/wgcf
 
-# 复制脚本并赋予执行权限
+# 3. 动态获取最新的 wireguard-go 并安装
+RUN WG_GO_URL=$(curl -s https://api.github.com/repos/tailscale/wireguard-go/releases/latest | grep "browser_download_url.*linux-amd64.tar.gz" | cut -d '"' -f 4) && \
+    echo "Downloading latest wireguard-go from: $WG_GO_URL" && \
+    curl -L "$WG_GO_URL" | tar xz -C /usr/local/bin/ && \
+    chmod +x /usr/local/bin/wireguard-go
+
+# 4. 拷贝脚本和配置
 COPY entrypoint.sh /entrypoint.sh
-COPY ip_changer.sh /ip_changer.sh
-RUN chmod +x /entrypoint.sh /ip_changer.sh
+COPY rotate_ip.sh /rotate_ip.sh
+COPY sockd.conf /etc/sockd.conf
+
+RUN chmod +x /entrypoint.sh /rotate_ip.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
